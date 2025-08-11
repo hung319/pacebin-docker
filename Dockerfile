@@ -1,24 +1,26 @@
 FROM debian:stable-slim
 
-# Cài gói cần thiết để build
+# Cài các gói cần thiết để build pacebin
 RUN apt-get update && apt-get install -y \
     build-essential \
     git \
+    libc6-dev \
+    libxcrypt-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Clone source
+# Clone source code
 WORKDIR /app
-RUN git clone https://git.swurl.xyz/swirl/pacebin.git . 
+RUN git clone https://git.swurl.xyz/swirl/pacebin.git .
 
-# Build pacebin
+# Build & cài pacebin (chỉ binary, không systemd/nginx)
 RUN make install-bin prefix=/usr
 
-# Tạo thư mục data để lưu paste
+# Thư mục lưu paste
 RUN mkdir -p /data
 VOLUME ["/data"]
 
-# Cổng mặc định của pacebin
+# Port mặc định
 EXPOSE 8081
 
-# Chạy pacebin với thư mục lưu trữ /data
+# Chạy pacebin server
 CMD ["pacebin", "-d", "/data", "-p", "8081"]
