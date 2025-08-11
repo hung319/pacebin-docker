@@ -1,18 +1,13 @@
-FROM alpine:latest AS builder
+# Stage 1: Build
+FROM debian:stable-slim AS builder
 
-# Cài công cụ build
-RUN apk add --no-cache build-base git wget
+# Cài gói cần thiết để build
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Cài glibc từ sgerrand
-ENV GLIBC_VERSION=2.35-r1
-RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-${GLIBC_VERSION}.apk && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}.apk && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-dev-${GLIBC_VERSION}.apk && \
-    apk add glibc-${GLIBC_VERSION}.apk glibc-bin-${GLIBC_VERSION}.apk glibc-dev-${GLIBC_VERSION}.apk && \
-    rm -f glibc-*.apk
-
-# Clone source
+# Clone source code
 WORKDIR /app
 RUN git clone https://git.swurl.xyz/swirl/pacebin.git .
 
@@ -20,25 +15,17 @@ RUN git clone https://git.swurl.xyz/swirl/pacebin.git .
 RUN make
 
 # Stage 2: Runtime
-FROM alpine:latest
+FROM debian:stable-slim
 
-# Cài glibc runtime
-ENV GLIBC_VERSION=2.35-r1
-RUN apk add --no-cache wget && \
-    wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-${GLIBC_VERSION}.apk && \
-    wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/${GLIBC_VERSION}/glibc-bin-${GLIBC_VERSION}.apk && \
-    apk add glibc-${GLIBC_VERSION}.apk glibc-bin-${GLIBC_VERSION}.apk && \
-    rm -f glibc-*.apk
-
-# Copy binary
+# Copy binary từ builder
 COPY --from=builder /app/pacebin /usr/bin/pacebin
 
-# Data dir
+# Tạo thư mục lưu paste
 RUN mkdir -p /data
 VOLUME ["/data"]
 
-# Port
+# Mở port mặc định
 EXPOSE 8081
 
+# Chạy pacebin
 CMD ["pacebin", "-d", "/data", "-p", "8081"]
