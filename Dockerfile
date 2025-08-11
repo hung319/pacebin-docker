@@ -3,7 +3,7 @@ FROM alpine:latest AS builder
 RUN apk add --no-cache build-base git libc-dev \
     && git clone https://git.swurl.xyz/swirl/pacebin.git /pacebin \
     && cd /pacebin \
-    && make
+    && make CC="gcc" CFLAGS="-O2 -static"
 
 # Stage 2: Minimal runtime
 FROM alpine:latest
