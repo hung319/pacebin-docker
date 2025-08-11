@@ -1,31 +1,33 @@
 # Stage 1: Build
-FROM debian:stable-slim AS builder
+FROM alpine:3.20 AS builder
 
 # Cài gói cần thiết để build
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache build-base git
 
 # Clone source code
 WORKDIR /app
-RUN git clone https://git.swurl.xyz/swirl/pacebin.git .
+RUN git clone https://github.com/hung319/pacebin.git .
 
 # Build binary
 RUN make
 
 # Stage 2: Runtime
-FROM debian:stable-slim
+FROM alpine:3.20
 
 # Copy binary từ builder
-COPY --from=builder /app/pacebin /usr/bin/pacebin
+COPY --from=builder /app/pacebin /usr/local/bin/pacebin
 
 # Tạo thư mục lưu paste
 RUN mkdir -p /data
 VOLUME ["/data"]
 
-# Mở port mặc định
+# Biến môi trường tương tự như file systemd dùng
+ENV DIR=/data \
+    PORT=8081 \
+    SEED=secret
+
+# Mở port
 EXPOSE 8081
 
-# Chạy pacebin
-CMD ["pacebin", "-d", "/data", "-p", "8081"]
+# Chạy pacebin với tham số giống systemd
+CMD ["/bin/sh", "-c", "pacebin -d \"$DIR\" -p \"$PORT\" -s \"$SEED\" -k"]
