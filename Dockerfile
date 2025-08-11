@@ -1,25 +1,21 @@
-# Stage 1: Build pacebin & pacectl
-FROM alpine:latest AS builder
-RUN apk add --no-cache build-base git libc-dev \
-    && git clone https://git.swurl.xyz/swirl/pacebin.git /pacebin \
-    && cd /pacebin \
-    && make CC="gcc" CFLAGS="-O2 -static"
+FROM debian:12-slim
 
-# Stage 2: Minimal runtime
-FROM alpine:latest
+# Cài toolchain để build C project + git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Tạo thư mục paste (Render chỉ cho ghi ở /tmp)
-RUN mkdir -p /tmp/pacebin
+# Clone source code
+WORKDIR /app
+RUN git clone https://git.swurl.xyz/swirl/pacebin.git .
+ 
+# Build binary
+RUN make
 
-# Copy file chạy từ stage build
-COPY --from=builder /pacebin/pacebin /usr/local/bin/pacebin
-COPY --from=builder /pacebin/pacectl /usr/local/bin/pacectl
+# Cấu hình cổng (theo docs pacebin mặc định là 8081)
+EXPOSE 8081
 
-# Render cung cấp biến PORT, mặc định 8081
-ENV PORT=8081
-
-EXPOSE $PORT
-
-# Chạy pacebin ở /tmp/pacebin (mặc định pacebin lưu tại cwd)
-WORKDIR /tmp/pacebin
-CMD ["pacebin"]
+# Chạy trực tiếp binary đã build
+CMD ["./pacebin"]
